@@ -36,7 +36,7 @@ using sensor_msgs::Joy;
 namespace nao_teleop{
 TeleopNaoJoy::TeleopNaoJoy()
 : privateNh("~"), m_enabled(false),
-  m_xAxis(3), m_yAxis(2), m_turnAxis(0), m_headYawAxis(4),	m_headPitchAxis(5),
+  m_xAxis(3), m_yAxis(2), m_turnAxis_left(0), m_turnAxis_right(0), m_headYawAxis(4),	m_headPitchAxis(5),
   m_crouchBtn(9), m_initPoseBtn(0), m_enableBtn(8), m_modifyHeadBtn(5),
   m_maxVx(1.0), m_maxVy(1.0), m_maxVw(0.5),
   m_maxHeadYaw(2.0943), m_maxHeadPitch(0.7853),
@@ -46,7 +46,8 @@ TeleopNaoJoy::TeleopNaoJoy()
 {
   privateNh.param("axis_x", m_xAxis, m_xAxis);
   privateNh.param("axis_y", m_yAxis, m_yAxis);
-  privateNh.param("axis_turn", m_turnAxis, m_turnAxis);
+  privateNh.param("axis_turn_left", m_turnAxis_left, m_turnAxis_left);
+  privateNh.param("axis_turn_right", m_turnAxis_right, m_turnAxis_right);
   privateNh.param("axis_head_yaw", m_headYawAxis, m_headYawAxis);
   privateNh.param("axis_head_pitch", m_headPitchAxis, m_headPitchAxis);
   privateNh.param("btn_crouch", m_crouchBtn, m_crouchBtn);
@@ -167,7 +168,7 @@ void TeleopNaoJoy::joyCallback(const Joy::ConstPtr& joy){
 
   // directional commands
   // walking velocities and head movements
-  if (!axisValid(m_xAxis, joy) ||  !axisValid(m_yAxis, joy) || !axisValid(m_turnAxis, joy)){
+  if (!axisValid(m_xAxis, joy) ||  !axisValid(m_yAxis, joy) || !axisValid(m_turnAxis_left, joy)){
     m_motion.linear.x = m_motion.linear.y = m_motion.angular.z = 0.0;
     m_headAngles.joint_angles[0] = m_headAngles.joint_angles[1] = 0.0;
     ROS_WARN("Joystick message too short for Move or Turn axis!\n");
@@ -176,16 +177,33 @@ void TeleopNaoJoy::joyCallback(const Joy::ConstPtr& joy){
       // move head
       m_headAngles.header.stamp = ros::Time::now();
       m_headAngles.relative = 1;
-      m_headAngles.joint_angles[0] = joy->axes[m_turnAxis];
+      m_headAngles.joint_angles[0] = joy->axes[m_turnAxis_left];
       m_headAngles.joint_angles[1] = joy->axes[m_xAxis];
 
     } else {
       // stop head:
       m_headAngles.joint_angles[0] = m_headAngles.joint_angles[1] = 0.0;
       // move base:
-      m_motion.linear.x = m_maxVx * std::max(std::min(joy->axes[m_xAxis], 1.0f), -1.0f);
-      m_motion.linear.y = m_maxVy * std::max(std::min(joy->axes[m_yAxis], 1.0f), -1.0f);
-      m_motion.angular.z = m_maxVw * std::max(std::min(joy->axes[m_turnAxis], 1.0f), -1.0f);
+      if (std::abs(joy->axes[m_xAxis])>0.05f) {
+        m_motion.linear.x = m_maxVx * std::max(std::min(joy->axes[m_xAxis], 1.0f), -1.0f);
+      }
+      else {
+        m_motion.linear.x = 0.0f;
+      }
+      if (std::abs(joy->axes[m_yAxis])>0.05f) {
+        m_motion.linear.y = m_maxVy * std::max(std::min(joy->axes[m_yAxis], 1.0f), -1.0f);
+      }
+      else {
+        m_motion.linear.y = 0.0f;
+      }
+      float z_left = m_maxVw * std::max(std::min((joy->axes[m_turnAxis_left]-1), 1.0f), -1.0f);
+      float z_right = - (m_maxVw * std::max(std::min((joy->axes[m_turnAxis_right]-1), 1.0f), -1.0f));
+      if (std::abs(z_left) > std::abs(z_right)) {
+        m_motion.angular.z = z_left;
+      }
+      else {
+        m_motion.angular.z = z_right;
+      }
     }
   }
 

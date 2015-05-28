@@ -103,7 +103,8 @@ protected:
 
   int m_xAxis;
   int m_yAxis;
-  int m_turnAxis;
+  int m_turnAxis_left;
+  int m_turnAxis_right;
   int m_headYawAxis;
   int m_headPitchAxis;
   int m_crouchBtn;

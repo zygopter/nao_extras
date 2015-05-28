@@ -1,6 +1,7 @@
-axis_x: 3
-axis_y: 2
-axis_turn: 0
+axis_x: 4
+axis_y: 3
+axis_turn_left: 2
+axis_turn_right: 5
 btn_crouch: 0
 btn_enable_control: 3
 btn_head_mod: 11
